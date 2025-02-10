@@ -20,7 +20,7 @@ export class Game extends Scene
         player.body.setBounce(20, 20);
         player.body.setSize(50, 100);
         player.body.setAllowRotation(true);
-	player.body.setMaxSpeed(10);
+	player.body.setMaxSpeed(100);
 
         this.input.once('pointerdown', () => {
             this.scene.start('GameOver');
