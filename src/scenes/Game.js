@@ -164,7 +164,7 @@ export class Game extends Scene
         }
 
         if (validSpot) {
-            const coin = this.add.circle(x, y, 10, 0xFFFF00);
+            const coin = this.add.image(x, y, 'coin').setScale(0.05);
             const coinBody = this.matter.add.circle(x, y, 10, {
                 isSensor: true,
                 isStatic: true
