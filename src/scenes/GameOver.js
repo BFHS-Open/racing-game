@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 
 let names = [
 	"Thomas - Programmer",
+    "Eden - Artist",
 ]
 
 export class GameOver extends Scene
@@ -9,6 +10,10 @@ export class GameOver extends Scene
     constructor ()
     {
         super('GameOver');
+    }
+
+    init(data) {
+        this.score = data.score || 0;
     }
 
     create ()
@@ -23,7 +28,7 @@ export class GameOver extends Scene
             align: 'center'
         }).setOrigin(0.5);
 
-        this.add.text(512, 180, 'Credits', {
+        this.add.text(512, 180, '\nCredits', {
             fontFamily: 'Arial Black', fontSize: 64, color: '#ffffff',
             stroke: '#000000', strokeThickness: 8,
             align: 'center'
@@ -31,6 +36,20 @@ export class GameOver extends Scene
 
 
         this.add.text(512, 384, names.join("\n"), {
+            fontFamily: 'Arial Black', fontSize: 24, color: '#ffffff',
+            stroke: '#000000', strokeThickness: 8,
+            align: 'center'
+        }).setOrigin(0.5);
+
+
+        this.add.text(512, 484, "Score: " + this.score, {
+            fontFamily: 'Arial Black', fontSize: 24, color: '#ffffff',
+            stroke: '#000000', strokeThickness: 8,
+            align: 'center'
+        }).setOrigin(0.5);
+
+
+        this.add.text(512, 550, "Press anywhere to play again", {
             fontFamily: 'Arial Black', fontSize: 24, color: '#ffffff',
             stroke: '#000000', strokeThickness: 8,
             align: 'center'

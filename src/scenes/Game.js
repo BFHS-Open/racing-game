@@ -1,4 +1,6 @@
-import { Scene } from 'phaser';
+import { Math, Scene, Physics } from 'phaser';
+
+const Matter = Physics.Matter.Matter;
 
 export class Game extends Scene
 {
@@ -6,9 +8,6 @@ export class Game extends Scene
     constructor ()
     {
         super('Game');
-
-        this.car = null;
-        this.cursors = null;
     }
 
     create ()
@@ -26,8 +25,8 @@ export class Game extends Scene
 
         this.car = this.matter.add.sprite(25, 25, 'car', null);
         this.car.setScale(0.05);
-
         this.car.setExistingBody(body);
+        this.car.setCollisionCategory(0x0001)
 
         this.cameras.main.setBounds(0, 0, this.map.width, this.map.height);
         this.cameras.main.startFollow(this.car, true);
@@ -35,7 +34,35 @@ export class Game extends Scene
 
         this.cursors = this.input.keyboard.createCursorKeys();
 
+        this.score = 0;
+        this.scoreText = this.add.text(675, 550, 'Score: 0', {
+            fontFamily: 'Arial Black', fontSize: 14, color: '#ffffff',
+            stroke: '#000000', strokeThickness: 3,
+            align: 'center'
+        }).setScrollFactor(0);
+
+        this.time.addEvent({
+            delay: 1000,
+            callback: this.incrementScore,
+            callbackScope: this,
+            loop: true
+        });
+
+        this.enemies = this.add.group(); 
+        this.coins = this.add.group(); 
+
+        this.pirateTimer = 3000;
+        this.coinTimer = 2000;
+
+        this.spawnPirateCat();
+        this.spawnCoins();
+
         this.createBoundaries();
+    }
+
+    incrementScore() {
+        this.score++;
+        this.scoreText.setText('Score: ' + this.score);
     }
 
     createBoundaries() {
@@ -114,6 +141,116 @@ export class Game extends Scene
         });
     }
 
+    spawnCoins() {
+        let validSpot = false;
+        let x, y;
+        let attempts = 0;
+        const maxAttempts = 100;
+
+        while (!validSpot && attempts < maxAttempts) {
+            x = Math.Between(50, this.map.width - 50);
+            y = Math.Between(50, this.map.height - 50);
+
+            // Create a candidate body (without adding it to the world)
+            const candidate = Matter.Bodies.circle(x, y, 20, {
+                isSensor: true,
+                isStatic: true
+            });
+
+            // Check collisions against all bodies in the world
+            const collisions = Matter.Query.collides(candidate, this.matter.world.localWorld.bodies);
+            validSpot = (collisions.length === 0);
+            attempts++;
+        }
+
+        if (validSpot) {
+            const coin = this.add.circle(x, y, 10, 0xFFFF00);
+            const coinBody = this.matter.add.circle(x, y, 10, {
+                isSensor: true,
+                isStatic: true
+            });
+            coin.setData('body', coinBody);
+            coinBody.collisionGroup = -2;
+            coinBody.gameObject = coin;
+            this.coins.add(coin);
+        }
+
+        let newDelay = this.coinTimer - (this.score * 10);
+
+        // Schedule the next pirate cat spawn:
+        this.time.addEvent({
+            delay: newDelay,
+            callback: this.spawnCoins,
+            callbackScope: this,
+            loop: false
+        });
+    }
+
+    spawnPirateCat() {
+        const edge = Math.Between(0, 3);
+        let x, y;
+        
+        switch(edge) {
+            case 0: // Top
+                x = Math.Between(0, this.map.width);
+                y = -50;
+                break;
+            case 1: // Right
+                x = this.map.width + 50;
+                y = Math.Between(0, this.map.height);
+                break;
+            case 2: // Bottom
+                x = Math.Between(0, this.map.width);
+                y = this.map.height + 50;
+                break;
+            case 3: // Left
+                x = -50;
+                y = Math.Between(0, this.map.height);
+                break;
+        }
+
+        const pirateCat = this.matter.add.sprite(x, y, 'piratecat', null, {
+            frictionAir: 0,
+            friction: 0,
+            frictionStatic: 0,
+            collisionFilter: {
+                category: 0x0002,    // Set pirate cat's category
+                mask: 0x0001         // Only collide with player (category 0x0001)
+            }
+        });
+        pirateCat.setScale(0.1);
+        pirateCat.setSensor(true);
+        
+        const angle = Math.Angle.Between(x, y, this.car.x, this.car.y);
+        const randomDeviation = Math.DegToRad(Math.Between(-10, 10));
+        const velocity = new Math.Vector2().setToPolar(angle + randomDeviation, Math.Between(2,4));
+        
+        pirateCat.setVelocity(velocity.x, velocity.y);
+        this.enemies.add(pirateCat);
+
+        let newDelay = this.pirateTimer - (this.score * 10);
+
+        // Schedule the next pirate cat spawn:
+        this.time.addEvent({
+            delay: newDelay,
+            callback: this.spawnPirateCat,
+            callbackScope: this,
+            loop: false
+        });
+    }
+
+    handleCollision(car, other) {
+        if (other.collisionGroup === -2) { // Coin collision
+            this.score += 25;
+            this.scoreText.setText('Score: ' + this.score);
+            this.matter.world.remove(other);
+            other.gameObject.destroy();
+        } else if (other.gameObject && other.gameObject.texture.key === 'piratecat') {
+            this.gameOver = true;
+            this.scene.start('GameOver', { score: this.score });
+        }
+    }
+
     update ()
     {
         const driveForce = 0.0002;
@@ -136,5 +273,13 @@ export class Game extends Scene
         } else {
             this.car.setAngularVelocity(0);
         } 
+
+        const bodies = this.matter.world.localWorld.bodies;
+        for (let i = 0; i < bodies.length; i++) {
+            const body = bodies[i];
+            if (this.matter.overlap(this.car.body, body)) {
+                this.handleCollision(this.car, body);
+            }
+        }
     }
 }
