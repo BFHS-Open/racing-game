@@ -15,10 +15,10 @@ const config = {
     parent: 'game-container',
     backgroundColor: '#028af8',
     physics: {
-        default: 'arcade',
-        arcade: {
+        default: 'matter',
+        matter: {
             gravity: { y: 0 },
-            debug: true
+            debug: true 
         }
     },
     scale: {

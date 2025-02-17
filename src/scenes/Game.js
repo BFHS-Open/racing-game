@@ -1,58 +1,140 @@
 import { Scene } from 'phaser';
 
-let player;
-let speed = 0;
-
 export class Game extends Scene
 {
 
     constructor ()
     {
         super('Game');
+
+        this.car = null;
+        this.cursors = null;
     }
 
     create ()
     {
-        player = this.add.rectangle(400, 300, 50, 100, 0x00ff00);
+        this.matter.world.setBounds(0, 0, 800, 600);
+        this.matter.world.setGravity(0, 0);
 
-	this.physics.add.existing(player)
-	player.body.setCollideWorldBounds(true);
-        player.body.setBounce(20, 20);
-        player.body.setSize(50, 100);
-        player.body.setAllowRotation(true);
-	player.body.setMaxSpeed(100);
+        this.map = this.add.image(0, 0, 'map');
+        this.map.setOrigin(0);
 
-        this.input.once('pointerdown', () => {
-            this.scene.start('GameOver');
+        //this.car = this.add.rectangle(0, 0, 25, 15, 0x00ff00)
+        //this.matter.add.gameObject(this.car);
+
+        let body = this.matter.bodies.rectangle(25, 25, 15, 25);
+
+        this.car = this.matter.add.sprite(25, 25, 'car', null);
+        this.car.setScale(0.05);
+
+        this.car.setExistingBody(body);
+
+        this.cameras.main.setBounds(0, 0, this.map.width, this.map.height);
+        this.cameras.main.startFollow(this.car, true);
+        this.cameras.main.setZoom(2);
+
+        this.cursors = this.input.keyboard.createCursorKeys();
+
+        this.createBoundaries();
+    }
+
+    createBoundaries() {
+        const walls = this.matter.world.setBounds(0, 0, this.map.width, this.map.height);
+        
+        this.matter.add.rectangle(290, 250, 130, 120, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(230, 220, 100, 100, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(350, 0, 350, 100, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(350, 0, 150, 175, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(325, 0, 250, 150, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(325, 0, 100, 200, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(0, 350, 100, 500, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(0, 250, 170, 200, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(450, 700, 1300, 200, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(420, 700, 400, 250, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(600, 0, 700, 75, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(470, 450, 125, 125, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(800, 450, 250, 175, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(1200, 600, 450, 200, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(1200, 0, 420, 300, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(900, 0, 300, 200, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(500, 200, 100, 100, {
+            isStatic: true,
+        });
+
+        this.matter.add.rectangle(650, 130, 75, 75, {
+            isStatic: true,
         });
     }
 
     update ()
     {
-       let cursors = this.input.keyboard.createCursorKeys();
+        const driveForce = 0.0002;
+        const turnRate = 0.05;
 
-       if (cursors.left.isDown) {
-           player.body.angularVelocity -= 3; 
-       } 
-       if (cursors.right.isDown) {
-           player.body.angularVelocity += 3; 
-       }
+        // Forwards is -y
+        const forward = this.matter.vector.rotate({ x: 0, y: -1 }, this.car.rotation);
 
-       if (cursors.up.isDown) {
-          this.physics.velocityFromRotation(player.rotation - Math.PI / 2, speed += 10, player.body.velocity);
-       } else if (cursors.down.isDown) {
-          this.physics.velocityFromRotation(player.rotation - Math.PI / 2, speed += 10, player.body.velocity);
-       } else {
-           if (speed > 0) {
-               speed = Math.max(0, speed - 0.5);
-           } else if (speed < 0) {
-               speed = Math.min(0, speed + 0.5);
-           }
-       }
+        // Apply forwards force in the rotated forwards direction
+        if (this.cursors.up.isDown) {
+            this.car.applyForce(this.matter.vector.mult(forward, driveForce));
+        } else if (this.cursors.down.isDown) {
+            this.car.applyForce(this.matter.vector.mult(forward, -driveForce));
+        }
 
-       // Move the car based on its rotation
-       this.physics.velocityFromRotation(player.rotation - Math.PI / 2, speed, player.body.velocity);
-
-	console.log(speed);
+        if (this.cursors.left.isDown) {
+            this.car.setAngularVelocity(-turnRate);
+        } else if (this.cursors.right.isDown) {
+            this.car.setAngularVelocity(turnRate);
+        } else {
+            this.car.setAngularVelocity(0);
+        } 
     }
 }
